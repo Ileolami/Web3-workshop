@@ -1,34 +1,48 @@
-import { useState, useEffect } from "react";
-import { ChainlinkPlugin, MainnetPriceFeeds } from '@chainsafe/web3-plugin-chainlink';
+import { useState } from "react";
 import Web3 from "web3";
 import "./App.css";
 
 function App() {
-  const [variable, setVariable] = useState('0000000000')
+  const [account, setAccount] = useState("");
+  const [balance, setBalance] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // 2. Intialize 
-  const web3 = new Web3(window.ethereum);
-
-  web3.registerPlugin(new ChainlinkPlugin());
-
-  
-  async function doSomething() {
-    const result = await web3.chainlink.getPrice(MainnetPriceFeeds.EthUsd);
-
-    setVariable(result.answer.toString().substring(0, 5));
-  
-  }
+  const fetchBalance = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (window.ethereum) {
+        const web3 = new Web3(window.ethereum);
+        await window.ethereum.enable();
+        const accounts = await web3.eth.getAccounts();
+        const balance = await web3.eth.getBalance(accounts[0]);
+        setAccount(accounts[0]);
+        setBalance(web3.utils.fromWei(balance, "ether"));
+      } else {
+        throw new Error("Ethereum wallet not detected");
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <>
-      <div>
-        <button onClick={doSomething}>Get price</button>
+    <div className="app">
+      <div className="header">
+        <h1>Your Balance Checker</h1>
       </div>
-
-      <div>
-        <p>Crypto price : {variable}</p>
+      <div className="content">
+        <button onClick={fetchBalance} disabled={loading}>
+          {loading ? "Loading..." : "Check Balance"}
+        </button>
+        {error && <p className="error">{error}</p>}
+        {account && <p className="account">Account: {account}</p>}
+        {balance && <p className="balance">Balance: {balance} ETH</p>}
       </div>
-    </>
+    </div>
   );
 }
 
